@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgnoAI Chat</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        #chat-window {
+            width: 90%;
+            max-width: 700px;
+            height: 90vh;
+            max-height: 800px;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            overflow: hidden;
+            background-color: #fff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        #chat-container {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .message {
+            padding: 10px 15px;
+            border-radius: 18px;
+            max-width: 80%;
+            line-height: 1.5;
+        }
+        .user-message {
+            background-color: #007bff;
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+        .bot-message {
+            background-color: #e9e9eb;
+            color: #333;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+            white-space: pre-wrap; /* Behoudt witruimte zoals nieuwe regels */
+            word-wrap: break-word;
+        }
+        #chat-form {
+            display: flex;
+            border-top: 1px solid #ccc;
+            padding: 10px;
+        }
+        #command-input {
+            flex-grow: 1;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            padding: 10px 15px;
+            font-size: 16px;
+            outline: none;
+        }
+        #command-input:focus {
+            border-color: #007bff;
+        }
+        #send-button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            margin-left: 10px;
+            font-size: 20px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        #send-button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div id="chat-window">
+        <div id="chat-container">
+             <div class="message bot-message">Hoi! Ik ben AgnoAI. Waarmee kan ik je helpen op GitHub?</div>
+        </div>
+        <form id="chat-form">
+            <input type="text" id="command-input" placeholder="Typ je commando..." autocomplete="off">
+            <button id="send-button" type="submit">➤</button>
+        </form>
+    </div>
+
+    <script>
+        const form = document.getElementById('chat-form');
+        const input = document.getElementById('command-input');
+        const chatContainer = document.getElementById('chat-container');
+        const apiEndpoint = 'http://127.0.0.1:8000/api/command';
+
+        // Functie om berichten aan de chat toe te voegen
+        function addMessage(text, sender) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            messageDiv.textContent = text;
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight; // Scroll naar beneden
+            return messageDiv;
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const command = input.value.trim();
+            if (command === '') return;
+
+            addMessage(command, 'user');
+            input.value = ''; // Maak input leeg
+
+            // Toon een tijdelijk "denk"-bericht
+            const thinkingMessage = addMessage('🤖 Brein denkt na...', 'bot');
+
+            try {
+                const response = await fetch(apiEndpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ command: command })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Er is een fout opgetreden');
+                }
+                
+                const data = await response.json();
+                
+                // Vervang het "denk"-bericht met het echte antwoord
+                thinkingMessage.textContent = data.response;
+
+            } catch (error) {
+                // Toon een foutmelding in de chat
+                thinkingMessage.textContent = `❌ Fout: ${error.message}`;
+                thinkingMessage.style.backgroundColor = '#ffdddd';
+                thinkingMessage.style.color = '#d8000c';
+            } finally {
+                 chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+        });
+    </script>
+</body>
+</html>
